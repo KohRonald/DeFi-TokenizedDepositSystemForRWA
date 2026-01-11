@@ -1,5 +1,6 @@
 ## DeFi-TokenizedDepositSystemForRWA
-- This is a DeFi protocol where users can "deposit" collateral (simulated as ERC-20 tokens representing real-world assets like bonds or commodities) to mint tokenized deposit tokens, which act as stable, yield-bearing representations of those assets. 
+- This is a DeFi protocol where users can "deposit" collateral (simulated as ERC-20 tokens representing real-world assets like bonds or commodities) to mint tokenized RWA Share tokens, which act as stable, yield-bearing representations of those assets. 
+- Incentives of holding these RWA Share tokens are that they are yield-bearing and liquid as they represent a claim, not the asset itself.
 - This project is inspired by real banking tokenization initiatives, namely [Project Guardian](#MAS-Project-Guardian), allowing for the exploration of RWA standards, secure minting/burning mechanics, and compliance-like features purely on-chain.
 
 ## MAS Project Guardian
@@ -29,6 +30,12 @@
 
 4. Mock Oracle
     - Retrieves real world price feed of the RWA
+
+## Documentation
+- Transferring/Trading RWA share token forfeits redemption rights to the recipient
+
+### Notes
+- Yield rewards retrieved from reward pools are prefunded with RWA Share Tokens
 
 
 
