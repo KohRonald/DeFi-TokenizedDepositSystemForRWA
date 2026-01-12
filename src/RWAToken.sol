@@ -2,13 +2,13 @@
 
 pragma solidity ^0.8.30;
 
-import {Test, console2} from "lib/forge-std/src/Test.sol";
 import {RWAPriceConvertor} from "src/library/RWAPriceConvertor.sol";
 import {ERC20Burnable, ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {
     AggregatorV3Interface
 } from "lib/chainlink-brownie-contracts/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title RWAToken
@@ -28,7 +28,7 @@ import {
  *
  * @notice We assume that the appreciation of the asset does not go beyond the fee accumulated.
  */
-contract RWAToken is ERC20Burnable, Ownable {
+contract RWAToken is ERC20Burnable, Ownable, ReentrancyGuard {
     using RWAPriceConvertor for uint256;
 
     ///////////

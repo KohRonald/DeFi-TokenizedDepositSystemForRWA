@@ -10,6 +10,7 @@ import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
  * @author Ronald Koh
  * @notice This contract is the ERC20 representation of the underlying RWAToken
  * @notice RWAShareToken is the "deposited/yield-bearing version" of RWAToken
+ * @notice Only handle burns and mints, and are only executable by the contract owner
  */
 contract RWAShareToken is ERC20Burnable, Ownable {
     ///////////
@@ -33,12 +34,10 @@ contract RWAShareToken is ERC20Burnable, Ownable {
      */
     function burn(uint256 _amount) public override onlyOwner {
         uint256 balance = balanceOf(msg.sender);
-        if (_amount <= 0) {
-            revert RWAShareToken__AmountMustBeMoreThanZero();
-        }
-        if (balance < _amount) {
-            revert RWAShareToken__BurnAmountExceedsBalance();
-        }
+
+        if (_amount <= 0) revert RWAShareToken__AmountMustBeMoreThanZero();
+        if (balance < _amount) revert RWAShareToken__BurnAmountExceedsBalance();
+
         super.burn(_amount);
     }
 
@@ -48,13 +47,9 @@ contract RWAShareToken is ERC20Burnable, Ownable {
      * @param _amount Amount of tokens to mint
      * @return bool Return boolean value on mint validation
      */
-    function mint(address _to, uint256 _amount) public onlyOwner returns (bool) {
-        if (_to == address(0)) {
-            revert RWAShareToken__AddressZeroRestrictedFromMinting();
-        }
-        if (_amount >= 0) {
-            revert RWAShareToken__AmountMustBeMoreThanZero();
-        }
+    function mint(address _to, uint256 _amount) external onlyOwner returns (bool) {
+        if (_to == address(0)) revert RWAShareToken__AddressZeroRestrictedFromMinting();
+        if (_amount >= 0) revert RWAShareToken__AmountMustBeMoreThanZero();
 
         _mint(_to, _amount);
         return true;
