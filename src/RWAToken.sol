@@ -38,19 +38,19 @@ contract RWAToken is ERC20Burnable, Ownable {
     error RWAToken__ETHTransferFailed();
     error RWAToken__InsufficientETHAmount();
     error RWAToken__AddressZeroRestrictedFromMinting();
-    error RWAToken__TokenTooSmallToMint();
+    error RWAToken__TokenAmountTooSmallToMint();
 
     /////////////////////
     // STATE VARIABLES //
     /////////////////////
-    uint256 private constant MINTING_FEE_BPS = 50; // 0.5% = 50 basis points (adjustable)
+    uint256 private constant MINTING_FEE_BPS = 500; // 0.05%
     uint256 private constant BASIS_POINTS = 10000;
 
     AggregatorV3Interface private s_ETHUSDPriceFeed;
     AggregatorV3Interface private s_AssetUSDPriceFeed;
 
-    constructor(address ethUsdPriceFeedAddress, address assetUsdPriceFeedAddress)
-        ERC20("GoldToken", "Gold")
+    constructor(string memory tokenName, address ethUsdPriceFeedAddress, address assetUsdPriceFeedAddress)
+        ERC20(string.concat(tokenName, "Token"), tokenName)
         Ownable(msg.sender)
     {
         s_ETHUSDPriceFeed = AggregatorV3Interface(ethUsdPriceFeedAddress);
@@ -107,12 +107,16 @@ contract RWAToken is ERC20Burnable, Ownable {
         // Scale to tokens: ×10 for 1/10 denomination + ×1e10 to reach 18 decimals
         uint256 tokensToMint = assetFractional8dec * 10 * 1e10;
 
-        if (tokensToMint == 0) revert RWAToken__TokenTooSmallToMint();
+        if (tokensToMint == 0) revert RWAToken__TokenAmountTooSmallToMint();
 
         // 2. Interactions/Effects
         _mint(msg.sender, tokensToMint);
         emit RWAToken__MintedRWATokens(msg.sender, actualUsdValue, fee, tokensToMint);
     }
+
+    /////////////
+    // GETTERS //
+    /////////////
 
     /**
      * @notice Gets feed version of ETH/USD
@@ -128,5 +132,12 @@ contract RWAToken is ERC20Burnable, Ownable {
      */
     function getAssetUsdPriceFeedVersion() public view returns (uint256) {
         return s_AssetUSDPriceFeed.version();
+    }
+
+    /**
+     * @notice Gets minting Fee
+     */
+    function getMintingFee() public pure returns (uint256) {
+        return MINTING_FEE_BPS / BASIS_POINTS;
     }
 }

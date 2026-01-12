@@ -19,7 +19,10 @@ contract RWAShareToken is ERC20Burnable, Ownable {
     error RWAShareToken__BurnAmountExceedsBalance();
     error RWAShareToken__AddressZeroRestrictedFromMinting();
 
-    constructor() ERC20("GoldShareToken", "sRWA-Gold") Ownable(msg.sender) {}
+    constructor(string memory tokenName)
+        ERC20(string.concat(tokenName, "ShareToken"), string.concat("sRWA-", tokenName))
+        Ownable(msg.sender)
+    {}
 
     ///////////////////////
     // External Fuctions //

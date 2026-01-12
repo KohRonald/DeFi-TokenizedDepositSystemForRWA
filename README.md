@@ -12,6 +12,7 @@
 - Users lock ERC-20 collateral (representing RWAs, e.g., a mock "GoldToken" for physical gold) into a vault contract to mint "DepositTokens" (ERC-20 compliant, with optional yield via simple staking rewards).
 - The system ensures over-collateralization to mimic banking stability, with liquidation mechanics if collateral value drops (using a mock oracle). 
 - This simulates tokenizing real-world deposits/assets for on-chain custody and exchange, focusing on secure, scalable blockchain for payments and RWAs.
+- Contract supports dynamic asset deployment
 
 ### Key Components
 1. RWA Collateral Token (ERC-20)
