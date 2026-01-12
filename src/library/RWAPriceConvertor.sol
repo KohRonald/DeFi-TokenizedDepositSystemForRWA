@@ -15,12 +15,13 @@ library RWAPriceConvertor {
      * @notice Gets price of the asset from Chainlink Oracles
      * @param priceFeedAddress Address of the asset
      */
-    function getPrice(AggregatorV3Interface priceFeedAddress) internal view returns (uint256) {
+    function getPrice(AggregatorV3Interface priceFeedAddress) internal view returns (uint256, uint256) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(priceFeedAddress);
-        (, int256 answer,,,) = priceFeed.latestRoundData();
+        (, int256 answer,, uint256 updatedAt,) = priceFeed.latestRoundData();
 
         // Chainlink USD feeds have 8 decimals → normalize by multiplying by 1e10 to get 18 decimals
-        return uint256(answer * 1e10);
+        // Returns last timestamp that the price feed was updated for staleness checks
+        return (uint256(answer * 1e10), updatedAt);
     }
 
     /**
@@ -33,7 +34,7 @@ library RWAPriceConvertor {
         view
         returns (uint256)
     {
-        uint256 ethPrice = getPrice(priceFeedAddress);
+        (uint256 ethPrice,) = getPrice(priceFeedAddress);
         uint256 totalEthAmountInUsd = (ethPrice * totalEthBalance) / 1e18;
         return totalEthAmountInUsd;
     }

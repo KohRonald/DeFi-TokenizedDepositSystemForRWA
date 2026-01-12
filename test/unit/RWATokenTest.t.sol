@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Test} from "lib/forge-std/src/Test.sol";
+import {Test, console2} from "lib/forge-std/src/Test.sol";
 import {RWAToken} from "src/RWAToken.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {HelperConfig} from "script/HelperConfig.sol";
@@ -18,8 +18,8 @@ contract RWATokenTest is Test {
     address assetUsdPriceFeed;
 
     string public tokenName = "Gold";
-    uint256 constant ZERO_ETH_AMOUNT = 0e18;
-    uint256 constant ETH_AMOUNT = 1e18;
+    uint256 constant ZERO_ETH_AMOUNT = 0;
+    uint256 constant ETH_AMOUNT = 10 ether;
     address public owner = makeAddr("owner");
     address public alice = makeAddr("alice");
 
@@ -30,6 +30,8 @@ contract RWATokenTest is Test {
         vm.startPrank(owner);
         rwaToken = new RWAToken(tokenName, ethUsdPriceFeed, assetUsdPriceFeed);
         vm.stopPrank();
+
+        vm.deal(address(rwaToken), 100 ether); //Prefund the RWAToken contract
     }
 
     function testThatAliceCanMint() public {
@@ -55,5 +57,24 @@ contract RWATokenTest is Test {
         vm.expectRevert(RWAToken.RWAToken__InsufficientETHAmount.selector);
         vm.prank(alice);
         rwaToken.mint{value: 0}();
+    }
+
+    function testThatAliceCanWithdrawEth() public {
+        //Arrange
+        vm.deal(alice, ETH_AMOUNT);
+
+        //Act
+        vm.prank(alice);
+        rwaToken.mint{value: 0.1 ether}();
+        uint256 ethBalanceAfterMint = alice.balance;
+        uint256 rwaTokenMinted = rwaToken.balanceOf(alice);
+
+        vm.prank(alice);
+        rwaToken.burn(rwaTokenMinted);
+        uint256 ethBalanceAfterBurn = alice.balance;
+
+        //Assert
+        assertGt(ethBalanceAfterBurn, ethBalanceAfterMint); //Assert that eth balance is higher after burning
+        assertEq(rwaToken.balanceOf(alice), 0); //Assert that RWATokens are all burned
     }
 }

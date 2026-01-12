@@ -37,6 +37,7 @@
 
 ### Notes
 - Yield rewards retrieved from reward pools are prefunded with RWA Share Tokens
+- Implements staleness checks for Oracle price feeds
 
 
 

@@ -24,10 +24,9 @@ contract RWAShareToken is ERC20Burnable, Ownable {
         Ownable(msg.sender)
     {}
 
-    ///////////////////////
-    // External Fuctions //
-    ///////////////////////
-
+    //////////////////////
+    // PUBLIC FUNCTIONS //
+    //////////////////////
     /**
      * @notice This functions burns token after performing validations
      * @param _amount Amount of tokens to burn
