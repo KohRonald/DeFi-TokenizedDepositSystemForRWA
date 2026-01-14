@@ -5,6 +5,7 @@ import {RWAToken} from "src/RWAToken.sol";
 import {RWAShareToken} from "src/RWAShareToken.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /**
  * @title TokenizedDepositEngine
@@ -19,10 +20,11 @@ import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/Reentr
  * @notice It handles all the logic for minting and redeeming RWA Share Token, as well as depositing & withdrawing collateral.
  * @notice RWAToken is the collateral and is stored in this contract
  */
-contract TokenizedDepositEngine is ReentrancyGuard {
+contract TokenizedDepositEngine is ReentrancyGuard, Ownable {
     ///////////
     // ERROR //
     ///////////
+    error TokenizedDepositEngine__InterestRateCannotExceed10000bps();
     error TokenizedDepositEngine__RWATokenAddressCannotBeAddressZero();
     error TokenizedDepositEngine__DepositAmountMustBeMoreThanZero();
     error TokenizedDepositEngine__TransferFailed();
@@ -32,7 +34,9 @@ contract TokenizedDepositEngine is ReentrancyGuard {
     /////////////////////
     // STATE VARIABLES //
     /////////////////////
-    uint256 private constant INTEREST_RATE = 1.5e16; // 1.5%
+    uint256 private s_interestRate;
+    uint256 private constant INTEREST_RATE_BASIS_POINTS_FACTOR = 1e14;
+    uint256 private constant INTEREST_RATE_PRECISION = 1e18;
     uint256 private constant MIN_HEALTH_FACTOR = 1e18; //To adjust to appropriate health factor
 
     mapping(address => uint256) private s_collateralDeposited;
@@ -42,12 +46,30 @@ contract TokenizedDepositEngine is ReentrancyGuard {
 
     RWAShareToken private immutable i_rwaShareToken;
 
-    constructor() {}
+    /**
+     * @notice The current interest rate, stored scaled up by 1e18 for precision.
+     * @dev Example: 5% is stored as 5e16 (0.05 × 1e18).
+     *
+     *  Interest Rate Calculation:
+     *      1 basis point = 0.01%
+     *      Assuming _initialInterestRateInBps = 100
+     *      s_interestRate = 100 * 1e14 = 10,000,000,000,000,000 or 1e16
+     *
+     *      Effective Rate: s_interestRate / INTEREST_RATE_PRECISION = 1e16/1e18 = 1e^-2 = 0.01 = 1%
+     *      Etc. 100 -> 1%, 500 -> 5%, 750 -> 7.5%
+     */
+    constructor(uint256 _initialInterestRateInBps) Ownable(msg.sender) {
+        s_interestRate = _initialInterestRateInBps * INTEREST_RATE_BASIS_POINTS_FACTOR;
+
+        // Safety: max 100% = 10,000 bps
+        if (_initialInterestRateInBps > 10000) revert TokenizedDepositEngine__InterestRateCannotExceed10000bps();
+    }
 
     ////////////
     // EVENTS //
     ////////////
     event RWAShareToken__CollateralDeposited(address indexed from, uint256 amountDeposited);
+    event RWAShareToken__InterestRateUpdated(uint256 bpsInput, uint256 storedRate);
 
     /**
      * @notice This function takes RWAToken and mints RWAShareToken at a 1:1 ratio
@@ -67,6 +89,16 @@ contract TokenizedDepositEngine is ReentrancyGuard {
     function redeemCollateralForRwaToken(uint256 amountToReedem) public {
         _burnCollateral(amountToReedem);
         _redeemCollateral(amountToReedem);
+    }
+
+    /**
+     * @notice Sets new interest rate for yield calculation
+     */
+    function setInterestRate(uint256 _newRateBps) external onlyOwner {
+        if (_newRateBps > 10000) revert TokenizedDepositEngine__InterestRateCannotExceed10000bps();
+
+        s_interestRate = _newRateBps * INTEREST_RATE_BASIS_POINTS_FACTOR;
+        emit RWAShareToken__InterestRateUpdated(_newRateBps, s_interestRate);
     }
 
     /**
@@ -180,7 +212,7 @@ contract TokenizedDepositEngine is ReentrancyGuard {
     /**
      * @notice Gets yield interest rate
      */
-    function getYieldInterestRate() external pure returns (uint256) {
-        return INTEREST_RATE;
+    function getYieldInterestRate() external view returns (uint256) {
+        return s_interestRate / INTEREST_RATE_PRECISION;
     }
 }
