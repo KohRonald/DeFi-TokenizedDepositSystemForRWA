@@ -40,7 +40,7 @@
 
 ### Notes
 - Yield rewards retrieved from reward pools are prefunded with RWA Share Tokens
-- Yield calculation will be based on latest interest rate 
+- Yield is calculated per period between user interactions (deposit/withdraw/claim) using a locked-in interest rate from the start of each period
 - Implements staleness checks for Oracle price feeds
 
 
