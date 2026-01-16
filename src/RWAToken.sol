@@ -29,8 +29,6 @@ import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/Reentr
  * @notice We assume that the appreciation of the asset does not go beyond the fee accumulated.
  */
 contract RWAToken is ERC20Burnable, Ownable, ReentrancyGuard {
-    using RWAPriceConvertor for uint256;
-
     ///////////
     // ERROR //
     ///////////
