@@ -120,7 +120,7 @@ contract TokenizedDepositEngine is ReentrancyGuard, Ownable {
      * @param amountToReedem The amount of RWAShareToken to reedem
      */
     function redeemCollateralForRwaToken(uint256 amountToReedem) public {
-        _burnCollateral(amountToReedem);
+        _burnRwaShareToken(amountToReedem);
         _redeemCollateral(amountToReedem);
     }
 
@@ -193,7 +193,7 @@ contract TokenizedDepositEngine is ReentrancyGuard, Ownable {
     /**
      * @notice Validates and burns RWAShareToken from msg.sender
      */
-    function _burnCollateral(uint256 amountToBurn) internal {}
+    function _burnRwaShareToken(uint256 amountToBurn) internal {}
 
     /**
      * @notice Calculates Collateral value, yield generated, and transfer to msg.sender
