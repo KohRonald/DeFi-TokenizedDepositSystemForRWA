@@ -36,6 +36,7 @@ contract TokenizedDepositEngine is ReentrancyGuard, Ownable {
     error TokenizedDepositEngine__UserHealthFactorIsBroken();
     error TokenizedDepositEngine__InvalidOraclePrice();
     error TokenizedDepositEngine__StalePriceFeedData();
+    error TokenizedDepositEngine__UserTokenBalanceInsufficientToBurn();
 
     /////////////////////
     // STATE VARIABLES //
@@ -52,7 +53,7 @@ contract TokenizedDepositEngine is ReentrancyGuard, Ownable {
     mapping(address => uint256) private s_collateralDeposited;
     mapping(address => YieldSnapshot) private s_userYieldSnapshots;
     mapping(address => uint256) private s_userTotalYieldGained;
-    mapping(address => uint256) private s_rwaTokenMinted;
+    mapping(address => uint256) private s_rwaShareTokenMinted;
 
     AggregatorV3Interface private s_AssetUsdPriceFeed;
     RWAToken private immutable i_rwaToken;
@@ -97,8 +98,10 @@ contract TokenizedDepositEngine is ReentrancyGuard, Ownable {
     ////////////
     // EVENTS //
     ////////////
-    event RWAShareToken__CollateralDeposited(address indexed from, uint256 amountDeposited);
-    event RWAShareToken__InterestRateUpdated(uint256 bpsInput, uint256 storedRate);
+    event TokenizedDepositEngine__CollateralDeposited(address indexed from, uint256 amountDeposited);
+    event TokenizedDepositEngine__InterestRateUpdated(uint256 bpsInput, uint256 storedRate);
+    event TokenizedDepositEngine__RwaShareTokenBurn(address from, uint256 amountBurned);
+    event TokenizedDepositEngine__CollateralRedeem(address from, uint256 amountRedeemed);
 
     //////////////////////
     // PUBLIC FUNCTIONS //
@@ -159,7 +162,7 @@ contract TokenizedDepositEngine is ReentrancyGuard, Ownable {
             timestamp: block.timestamp, interestRate: s_interestRate, balance: s_collateralDeposited[msg.sender]
         });
 
-        emit RWAShareToken__CollateralDeposited(msg.sender, _rwaTokensDeposited);
+        emit TokenizedDepositEngine__CollateralDeposited(msg.sender, _rwaTokensDeposited);
 
         // 3.Interactions
         (bool success) = IERC20(i_rwaToken).transferFrom(msg.sender, address(this), _rwaTokensDeposited);
@@ -171,11 +174,12 @@ contract TokenizedDepositEngine is ReentrancyGuard, Ownable {
      */
     function _mintRwaShareToken(uint256 amountOfTokensToMint) internal {
         //2. Checks/Effects
-        s_rwaTokenMinted[msg.sender] += amountOfTokensToMint;
+        s_rwaShareTokenMinted[msg.sender] += amountOfTokensToMint;
         _revertIfHealthFactorIsBroken(msg.sender);
 
         //3. Interactions
         bool minted = i_rwaShareToken.mint(msg.sender, amountOfTokensToMint);
+        
         if (!minted) revert TokenizedDepositEngine__FailedToMintRWAShareToken();
     }
 
@@ -193,12 +197,33 @@ contract TokenizedDepositEngine is ReentrancyGuard, Ownable {
     /**
      * @notice Validates and burns RWAShareToken from msg.sender
      */
-    function _burnRwaShareToken(uint256 amountToBurn) internal {}
+    function _burnRwaShareToken(uint256 amountToBurn) internal {
+
+        // 1.Checks
+        if(i_rwaShareToken.balanceOf(msg.sender) < amountToBurn) revert TokenizedDepositEngine__UserTokenBalanceInsufficientToBurn();
+
+        // 2.Effects
+        s_rwaShareTokenMinted[msg.sender] -= amountToBurn;
+        emit TokenizedDepositEngine__RwaShareTokenBurn(msg.sender, amountToBurn);
+
+        // 3.Interactions
+        i_rwaShareToken.burn(amountToBurn);
+    }
 
     /**
      * @notice Calculates Collateral value, yield generated, and transfer to msg.sender
      */
-    function _redeemCollateral(uint256 amountToReedem) internal {}
+    function _redeemCollateral(uint256 amountToReedem) internal {
+        // 1.Checks
+
+        // 2.Effects
+        s_collateralDeposited[msg.sender] -= amountToReedem;
+        emit TokenizedDepositEngine__CollateralRedeem(msg.sender, amountToReedem);
+
+        // 3.Interactions
+        (bool success) = IERC20(i_rwaToken).transferFrom(address(this), msg.sender, amountToReedem);
+        if (!success) revert TokenizedDepositEngine__TransferFailed();
+    }
 
     /**
      * @notice Calculates and accrues the yield gained since the last checkpoint using the locked-in interest rate from that period.
@@ -280,7 +305,7 @@ contract TokenizedDepositEngine is ReentrancyGuard, Ownable {
         view
         returns (uint256 totalRwaShareTokenMinted, uint256 totalCollateralValueInUsd)
     {
-        totalRwaShareTokenMinted = s_rwaTokenMinted[user];
+        totalRwaShareTokenMinted = s_rwaShareTokenMinted[user];
         totalCollateralValueInUsd = getAccountCollateralValue(user);
 
         return (totalRwaShareTokenMinted, totalCollateralValueInUsd);
@@ -318,7 +343,7 @@ contract TokenizedDepositEngine is ReentrancyGuard, Ownable {
         if (_newRateBps > 10000) revert TokenizedDepositEngine__InterestRateCannotExceed10000bps();
 
         s_interestRate = _newRateBps * INTEREST_RATE_BASIS_POINTS_FACTOR;
-        emit RWAShareToken__InterestRateUpdated(_newRateBps, s_interestRate);
+        emit TokenizedDepositEngine__InterestRateUpdated(_newRateBps, s_interestRate);
     }
 
     /////////////
